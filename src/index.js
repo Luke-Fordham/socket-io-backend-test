@@ -30,7 +30,13 @@ io.on("connection", (socket) => {
     });
   }
   socket.emit("users", users);
-  // ...
+  // notify existing users
+  socket.broadcast.emit("user connected", {
+    userID: socket.userID,
+    username: socket.username,
+    connected: true,
+    messages: [],
+  });
 });
 // const UNIQUE_CLIENTS = true;
 //
