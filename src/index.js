@@ -37,7 +37,15 @@ io.on("connection", (socket) => {
     connected: true,
     messages: [],
   });
+
+  socket.on("private message", ({ content, to }) => {
+    socket.to(to).emit("private message", {
+      content,
+      from: socket.id,
+    });
+  });
 });
+
 // const UNIQUE_CLIENTS = true;
 //
 // // 1. Socket Map
