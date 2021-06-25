@@ -27,12 +27,13 @@ io.on("connection", (socket) => {
     users.push({
       userID: id,
       username: socket.username,
+      messages: []
     });
   }
   socket.emit("users", users);
   // notify existing users
   socket.broadcast.emit("user connected", {
-    userID: socket.userID,
+    userID: socket.id,
     username: socket.username,
     connected: true,
     messages: [],
