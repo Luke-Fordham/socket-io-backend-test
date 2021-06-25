@@ -27,7 +27,8 @@ io.on("connection", (socket) => {
     users.push({
       userID: id,
       username: socket.username,
-      messages: []
+      messages: [],
+      connected: true
     });
   }
   socket.emit("users", users);
@@ -47,48 +48,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// const UNIQUE_CLIENTS = true;
-//
-// // 1. Socket Map
-//
-// const subscribers = new Map();
-//
-// const subscribe = (id, socket) => {
-//   if (UNIQUE_CLIENTS && subscribers.has(id)) {
-//     console.log(
-//       `Client with ID ${id} already connected. Disconnecting older client.`
-//     );
-//     unsubscribe(id);
-//   }
-//
-//   subscribers.set(id, socket);
-//   console.log(`Connected to ${id}.`);
-// };
-//
-// const unsubscribe = id => {
-//   subscribers.delete(id);
-//   console.log(`Disconnected from ${id}.`);
-// };
-//
-// const notifySubscribers = data => {
-//   subscribers.forEach(socket => socket.emit("action", data));
-// };
-//
-// // 2. Socket Host
-//
-// io.on("connection", socket => {
-//   const id = socket.handshake.headers.origin;
-//
-//   subscribe(id, socket);
-//
-//   socket.on("action", data => {
-//     notifySubscribers(data);
-//   });
-//
-//   socket.on("disconnect", () => {
-//     unsubscribe(id);
-//   });
-// });
 
 // 3. Start the server
 server.listen(PORT, () =>
