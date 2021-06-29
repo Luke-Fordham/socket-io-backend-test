@@ -62,6 +62,10 @@ io.on("connection", (socket) => {
   });
 
   socket.on("private message", ({ content, to }) => {
+    console.log({
+      content,
+      from: socket.id,
+    });
     socket.to(to).emit("private message", {
       content,
       from: socket.id,
@@ -74,7 +78,6 @@ io.on("connection", (socket) => {
       let error = null;
       let user = {};
       const result = userList.find(user => user.userID === req.params.id);
-      console.log(userList, req.params.id);
       if (result) {
         success = true;
         user = result;
