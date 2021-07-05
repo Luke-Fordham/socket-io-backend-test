@@ -1,5 +1,7 @@
 const http = require("http");
 const app = require("express")();
+const {PrismaClient} = require('@prisma/client');
+const prisma = new PrismaClient();
 
 const server = http.createServer(app);
 const io = require("socket.io")(server, {
@@ -19,6 +21,19 @@ app.use(function (req, res, next) {
   );
   next();
 });
+
+app.get('/get-all-users', async (req, res) => {
+  let success = false;
+  let error = '';
+  let users = [];
+  users = await prisma.sb_chat_user.findMany();
+  if (users.length > 0){
+    success = true;
+  } else {
+    error = 'No users found';
+  }
+  res.send({success, error, users});
+})
 
 
 const PORT = 8080;
