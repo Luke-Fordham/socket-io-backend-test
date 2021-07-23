@@ -57,31 +57,43 @@ io.use((socket, next) => {
 io.on("connection", async (socket) => {
 
     const conversations = await prisma.$queryRaw(
-        `SELECT c.* FROM sb_conversation_member cm
-                             LEFT JOIN sb_conversation c ON cm.conversation_id = c.id
-                                WHERE cm.object_ref = 'sb_user'
-                                AND cm.object_id = ${socket.userId}
-                                `
+        `SELECT c.*
+         FROM sb_conversation_member cm
+                  LEFT JOIN sb_conversation c ON cm.conversation_id = c.id
+         WHERE cm.object_ref = 'sb_user'
+           AND cm.object_id = ${socket.userId}
+        `
     )
-    conversations && conversations.length > 0 && conversations.forEach(async (conv, index) => {
+
+    const fullConversation = conversations && conversations.length > 0 ? conversations.map(async (conv, index) => {
         const members = await prisma.$queryRaw(
-            `SELECT * FROM sb_conversation_member cm WHERE cm.conversation_id = ${conv.id}`
+            `SELECT u.*
+             FROM sb_conversation_member cm
+                      LEFT JOIN sb_user u ON cm.object_id = u.id
+             WHERE cm.conversation_id = ${conv.id} 
+             AND cm.object_ref = 'sb_user'`
         )
-        console.log('MEMBERS', members);
-        conversations[index]['members'] = members;
+        conv['members'] = members ? members : [];
+        return conv;
+    }) : [];
+
+    socket.emit('conversations', await Promise.all(fullConversation));
+
+    socket.on('join', (conversation) => {
+        console.log('joining', conversation)
+        socket.join(conversation);
     })
 
-    console.log(conversations);
 
-
-    socket.on("private message", ({content, to}) => {
+    socket.on("private message", ({content, conversation}) => {
         console.log({
             content,
             from: socket.userId,
+            to: conversation
         });
-        socket.to(to).emit("private message", {
+        socket.to(conversation).emit("private message", {
             content,
-            from: socket.id,
+            from: socket.userId,
         });
     });
 
