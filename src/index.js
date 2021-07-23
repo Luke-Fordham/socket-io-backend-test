@@ -85,33 +85,62 @@ io.use((socket, next) => {
 
 io.on("connection", async (socket) => {
 
-    const conversations = await prisma.$queryRaw(
-        `SELECT c.*
+    const emitConversations = async () => {
+        const conversations = await prisma.$queryRaw(
+            `SELECT c.*
          FROM sb_conversation_member cm
                   LEFT JOIN sb_conversation c ON cm.conversation_id = c.id
          WHERE cm.object_ref = 'sb_user'
            AND cm.object_id = ${socket.userId}
         `
-    )
+        )
 
-    const fullConversation = conversations && conversations.length > 0 ? conversations.map(async (conv, index) => {
-        const members = await prisma.$queryRaw(
-            `SELECT u.*
+        const fullConversation = conversations && conversations.length > 0 ? conversations.map(async (conv, index) => {
+            const members = await prisma.$queryRaw(
+                `SELECT u.*
              FROM sb_conversation_member cm
                       LEFT JOIN sb_user u ON cm.object_id = u.id
              WHERE cm.conversation_id = ${conv.id} 
              AND cm.object_ref = 'sb_user'`
-        )
-        conv['members'] = members ? members : [];
-        return conv;
-    }) : [];
+            )
+            conv['members'] = members ? members : [];
+            return conv;
+        }) : [];
 
-    socket.emit('conversations', await Promise.all(fullConversation));
+        return await Promise.all(fullConversation);
+    }
+
+    socket.emit("conversations", await emitConversations());
 
     socket.on('join', (conversation) => {
         console.log('joining', conversation)
         socket.join(conversation);
     })
+
+    // socket.on('new conversation', async (conversation) => {
+    //     if (conversation && conversation.members && conversation.members.length > 0){
+    //         const name = conversation.name ? conversation.name : conversation.members.toString();
+    //         const newConversation = await prisma.sb_conversation.create({
+    //             data: {
+    //                 name: name,
+    //                 description: conversation.description && conversation.description,
+    //                 type_id: 1
+    //             }
+    //         })
+    //         if (newConversation){
+    //             console.log('new conversation');
+    //             conversation.members.forEach(async member => {
+    //                     console.log(member)
+    //                     socket.to()emit("new conversation", newConversation)
+    //             }
+    //             )
+    //         } else {
+    //             socket.emit("error", {message: 'unable to create conversation'})
+    //         }
+    //     } else {
+    //         socket.emit("error", {message: 'invalid request'})
+    //     }
+    // })
 
 
     socket.on("private message", ({content, conversation}) => {
