@@ -72,6 +72,7 @@ app.get('/get-conversation/:id', async (req, res) => {
     })
 })
 
+
 io.use((socket, next) => {
     const username = socket.handshake.auth.username;
     const userId = socket.handshake.auth.userId;
@@ -85,13 +86,22 @@ io.use((socket, next) => {
 
 io.on("connection", async (socket) => {
 
-    const emitConversations = async () => {
+    const updateSocket = await prisma.sb_user.update({
+        where: {
+            id: socket.userId
+        },
+        data: {
+            socket: socket.id
+        }
+    })
+
+    const emitConversations = async (userId) => {
         const conversations = await prisma.$queryRaw(
             `SELECT c.*
          FROM sb_conversation_member cm
                   LEFT JOIN sb_conversation c ON cm.conversation_id = c.id
          WHERE cm.object_ref = 'sb_user'
-           AND cm.object_id = ${socket.userId}
+           AND cm.object_id = ${userId}
         `
         )
 
@@ -110,37 +120,48 @@ io.on("connection", async (socket) => {
         return await Promise.all(fullConversation);
     }
 
-    socket.emit("conversations", await emitConversations());
+    socket.emit("conversations", await emitConversations(socket.userId));
 
     socket.on('join', (conversation) => {
         console.log('joining', conversation)
         socket.join(conversation);
     })
 
-    // socket.on('new conversation', async (conversation) => {
-    //     if (conversation && conversation.members && conversation.members.length > 0){
-    //         const name = conversation.name ? conversation.name : conversation.members.toString();
-    //         const newConversation = await prisma.sb_conversation.create({
-    //             data: {
-    //                 name: name,
-    //                 description: conversation.description && conversation.description,
-    //                 type_id: 1
-    //             }
-    //         })
-    //         if (newConversation){
-    //             console.log('new conversation');
-    //             conversation.members.forEach(async member => {
-    //                     console.log(member)
-    //                     socket.to()emit("new conversation", newConversation)
-    //             }
-    //             )
-    //         } else {
-    //             socket.emit("error", {message: 'unable to create conversation'})
-    //         }
-    //     } else {
-    //         socket.emit("error", {message: 'invalid request'})
-    //     }
-    // })
+    socket.on("new conversation", () => {
+        console.log(io.users);
+    })
+
+    socket.on('new conversation', async (conversation) => {
+        if (conversation && conversation.members && conversation.members.length > 0){
+            const name = conversation.name ? conversation.name : conversation.members.toString();
+            const newConversation = await prisma.sb_conversation.create({
+                data: {
+                    name: name,
+                    description: conversation.description && conversation.description,
+                    type_id: 1
+                }
+            })
+            if (newConversation){
+                console.log('new conversation');
+                conversation.members.forEach(async member => {
+                    const user = await prisma.sb_user.findUnique({
+                        where: {
+                            id: member
+                        }
+                    })
+                        console.log(user)
+                    if (user){
+                        socket.to(user.socket).emit("conversations", await emitConversations(user.id));
+                    }
+                }
+                )
+            } else {
+                socket.emit("error", {message: 'unable to create conversation'})
+            }
+        } else {
+            socket.emit("error", {message: 'invalid request'})
+        }
+    })
 
 
     socket.on("private message", ({content, conversation}) => {

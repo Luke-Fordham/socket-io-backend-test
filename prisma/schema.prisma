@@ -39,4 +39,5 @@ model sb_message {
 model sb_user {
   id       Int @unique @default(autoincrement())
   username String @db.VarChar(255)
+   socket          String? @db.VarChar(255)
 }
