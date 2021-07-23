@@ -43,6 +43,35 @@ app.get('/get-all-users', async (req, res) => {
     })
 })
 
+app.get('/get-conversation/:id', async (req, res) => {
+    let success = false;
+    let error = null;
+    let conversation = {};
+    if (req.params.id) {
+        const result = await prisma.sb_conversation.findUnique({where: {id: Number(req.params.id)}});
+        result['members'] = await prisma.$queryRaw(
+            `SELECT u.*
+             FROM sb_conversation_member cm
+                      LEFT JOIN sb_user u ON cm.object_id = u.id
+             WHERE cm.conversation_id = ${result.id} 
+             AND cm.object_ref = 'sb_user'`
+        )
+        if (result) {
+            success = true;
+            conversation = result;
+        } else {
+            error = 'No conversation found'
+        }
+    } else {
+        error = 'Conversation id needed'
+    }
+    res.send({
+        success,
+        error,
+        conversation
+    })
+})
+
 io.use((socket, next) => {
     const username = socket.handshake.auth.username;
     const userId = socket.handshake.auth.userId;
