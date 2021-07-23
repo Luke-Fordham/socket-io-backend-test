@@ -54,8 +54,6 @@ io.use((socket, next) => {
     next();
 });
 
-const userList = [];
-
 io.on("connection", async (socket) => {
 
     const conversations = await prisma.$queryRaw(
@@ -65,6 +63,13 @@ io.on("connection", async (socket) => {
                                 AND cm.object_id = ${socket.userId}
                                 `
     )
+    conversations && conversations.length > 0 && conversations.forEach(async (conv, index) => {
+        const members = await prisma.$queryRaw(
+            `SELECT * FROM sb_conversation_member cm WHERE cm.conversation_id = ${conv.id}`
+        )
+        console.log('MEMBERS', members);
+        conversations[index]['members'] = members;
+    })
 
     console.log(conversations);
 
