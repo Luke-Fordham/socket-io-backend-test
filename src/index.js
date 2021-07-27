@@ -53,8 +53,8 @@ app.get('/get-conversation/:id', async (req, res) => {
             `SELECT u.*
              FROM sb_conversation_member cm
                       LEFT JOIN sb_user u ON cm.object_id = u.id
-             WHERE cm.conversation_id = ${result.id} 
-             AND cm.object_ref = 'sb_user'`
+             WHERE cm.conversation_id = ${result.id}
+               AND cm.object_ref = 'sb_user'`
         )
         if (result) {
             success = true;
@@ -98,20 +98,20 @@ io.on("connection", async (socket) => {
     const emitConversations = async (userId) => {
         const conversations = await prisma.$queryRaw(
             `SELECT c.*
-         FROM sb_conversation_member cm
-                  LEFT JOIN sb_conversation c ON cm.conversation_id = c.id
-         WHERE cm.object_ref = 'sb_user'
-           AND cm.object_id = ${userId}
-        `
+             FROM sb_conversation_member cm
+                      LEFT JOIN sb_conversation c ON cm.conversation_id = c.id
+             WHERE cm.object_ref = 'sb_user'
+               AND cm.object_id = ${userId}
+            `
         )
 
         const fullConversation = conversations && conversations.length > 0 ? conversations.map(async (conv, index) => {
             const members = await prisma.$queryRaw(
                 `SELECT u.*
-             FROM sb_conversation_member cm
-                      LEFT JOIN sb_user u ON cm.object_id = u.id
-             WHERE cm.conversation_id = ${conv.id} 
-             AND cm.object_ref = 'sb_user'`
+                 FROM sb_conversation_member cm
+                          LEFT JOIN sb_user u ON cm.object_id = u.id
+                 WHERE cm.conversation_id = ${conv.id}
+                   AND cm.object_ref = 'sb_user'`
             )
             conv['members'] = members ? members : [];
             return conv;
@@ -132,7 +132,7 @@ io.on("connection", async (socket) => {
     })
 
     socket.on('new conversation', async (conversation) => {
-        if (conversation && conversation.members && conversation.members.length > 0){
+        if (conversation && conversation.members && conversation.members.length > 0) {
             const name = conversation.name ? conversation.name : conversation.members.toString();
             const newConversation = await prisma.sb_conversation.create({
                 data: {
@@ -141,19 +141,35 @@ io.on("connection", async (socket) => {
                     type_id: 1
                 }
             })
-            if (newConversation){
+            const newConversationMembers = await prisma.sb_conversation_member.createMany({
+                data:[
+                    {
+                        conversation_id: newConversation.id,
+                        object_ref: 'sb_user',
+                        object_id: 1
+                    },
+                    {
+                        conversation_id: newConversation.id,
+                        object_ref: 'sb_user',
+                        object_id: 2
+                    }
+                ]
+            })
+            if (newConversation && newConversationMembers) {
                 console.log('new conversation');
                 conversation.members.forEach(async member => {
-                    const user = await prisma.sb_user.findUnique({
-                        where: {
-                            id: member
-                        }
-                    })
+                        const user = await prisma.sb_user.findUnique({
+                            where: {
+                                id: member
+                            }
+                        })
                         console.log(user)
-                    if (user){
-                        socket.to(user.socket).emit("conversations", await emitConversations(user.id));
+                        if (user) {
+                            socket.to(user.socket).emit("conversations", await emitConversations(user.id));
+                            socket.emit("conversations", await emitConversations(user.id));
+                            console.log(await emitConversations(user.id));
+                        }
                     }
-                }
                 )
             } else {
                 socket.emit("error", {message: 'unable to create conversation'})
