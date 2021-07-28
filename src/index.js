@@ -133,7 +133,7 @@ io.on("connection", async (socket) => {
 
     socket.on('new conversation', async (conversation) => {
         if (conversation && conversation.members && conversation.members.length > 0) {
-            const name = conversation.name ? conversation.name : conversation.members.toString();
+            const name = conversation.name ? conversation.name : conversation.members.map(member => member.label).join(', ').toString();
             const newConversation = await prisma.sb_conversation.create({
                 data: {
                     name: name,
@@ -141,33 +141,29 @@ io.on("connection", async (socket) => {
                     type_id: 1
                 }
             })
+            const conversationObjs = conversation.members.map(member => {
+                return {
+                    conversation_id: newConversation.id,
+                    object_ref: 'sb_user',
+                    object_id: member.value
+                }
+            })
             const newConversationMembers = await prisma.sb_conversation_member.createMany({
-                data:[
-                    {
-                        conversation_id: newConversation.id,
-                        object_ref: 'sb_user',
-                        object_id: 1
-                    },
-                    {
-                        conversation_id: newConversation.id,
-                        object_ref: 'sb_user',
-                        object_id: 2
-                    }
-                ]
+                data: conversationObjs
             })
             if (newConversation && newConversationMembers) {
                 console.log('new conversation');
                 conversation.members.forEach(async member => {
                         const user = await prisma.sb_user.findUnique({
                             where: {
-                                id: member
+                                id: member.value
                             }
                         })
                         console.log(user)
                         if (user) {
                             socket.to(user.socket).emit("conversations", await emitConversations(user.id));
                             socket.emit("conversations", await emitConversations(user.id));
-                            console.log(await emitConversations(user.id));
+                            console.log("CONVERSATIONS", await emitConversations(user.id));
                         }
                     }
                 )
