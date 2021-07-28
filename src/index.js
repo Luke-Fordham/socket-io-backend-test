@@ -127,10 +127,6 @@ io.on("connection", async (socket) => {
         socket.join(conversation);
     })
 
-    socket.on("new conversation", () => {
-        console.log(io.users);
-    })
-
     socket.on('new conversation', async (conversation) => {
         if (conversation && conversation.members && conversation.members.length > 0) {
             const name = conversation.name ? conversation.name : conversation.members.map(member => member.label).join(', ').toString();
@@ -161,8 +157,7 @@ io.on("connection", async (socket) => {
                         })
                         console.log(user)
                         if (user) {
-                            socket.to(user.socket).emit("conversations", await emitConversations(user.id));
-                            socket.emit("conversations", await emitConversations(user.id));
+                            user.id === socket.userId ? socket.emit("conversations", await emitConversations(user.id)) : socket.to(user.socket).emit("conversations", await emitConversations(user.id));
                             console.log("CONVERSATIONS", await emitConversations(user.id));
                         }
                     }
