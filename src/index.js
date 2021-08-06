@@ -204,6 +204,17 @@ io.on("connection", async (socket) => {
             user
         })
     })
+
+    socket.on('disconnect', async () => {
+        const updateSocket = await prisma.sb_user.update({
+            where: {
+                id: socket.userId
+            },
+            data: {
+                socket: null
+            }
+        })
+    })
 });
 
 
