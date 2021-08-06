@@ -171,14 +171,16 @@ io.on("connection", async (socket) => {
     })
 
 
-    socket.on("private message", ({content, conversation}) => {
+    socket.on("private message", ({content, conversation, time}) => {
         console.log({
             content,
             from: socket.userId,
-            to: conversation
+            to: conversation,
+            time
         });
         socket.to(conversation).emit("private message", {
             content,
+            time,
             from: socket.userId,
         });
     });
