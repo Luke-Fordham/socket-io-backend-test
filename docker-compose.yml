@@ -1,0 +1,18 @@
+version: '3.7'
+services:
+  db:
+    container_name: chat_app_db
+#    networks:
+#      - localhost
+    image: mariadb:10.3.10-bionic
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    ports:
+      - 13306:3306
+    volumes:
+      #      - ../../_MariaDbData/db:/var/lib/mysql
+      - ../../_MariaDbData/conf:/etc/mysql/conf.d
+      - mariadbdata:/var/lib/mysql
+volumes:
+  mariadbdata:
+    driver: local
