@@ -13,6 +13,12 @@ services:
       #      - ../../_MariaDbData/db:/var/lib/mysql
       - ../../_MariaDbData/conf:/etc/mysql/conf.d
       - mariadbdata:/var/lib/mysql
+  nodejs:
+    container_name: chatapp_backend
+    image: bluesky/chatapp
+    ports:
+      - 3001:3001
+
 volumes:
   mariadbdata:
     driver: local
